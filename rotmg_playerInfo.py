@@ -7,26 +7,54 @@ __author__ = 'Muffin'
 class RotmgPlayerInfo:
     def __init__(self, email, password):
         self.characters = []
+        self.email = email
+        self.password = password
+        self.name = ""
         self.classList = None
-        self.infoRetrieved = True
+        self.classInfoRetrieved = False
+        self.ableToUpdate = False
 
-        self.fillClassList()
-        #Confirms that we actually have info in our classList
-        if(self.infoRetrieved):
-            self.fillCharactersList(email, password)
+        self.classInfoRetrieved = self.fillClassList()
+        # Confirms that we actually have info in our classList
+        if (self.classInfoRetrieved):
+            self.ableToUpdate = self.updateCharacters()
 
     def fillClassList(self):
         self.classList = ClassList("http://static.drips.pw/rotmg/production/current/xmlc/Objects.xml")
-        if(not self.classList.success):
-            self.infoRetrieved = False
+        return self.classList.success
 
-    def fillCharactersList(self, email, password):
-        print("Honk honk, still write RotmgPlayerInfo::fillCharactersList.")
-        print("It's currently in place but not doing anything!")
-        file = urlopen("http://www.realmofthemadgod.com/char/list?guid=" + email + "&password=" + password)
+    def updateCharacters(self):
+        file = urlopen("http://www.realmofthemadgod.com/char/list?guid=" + self.email + "&password=" + self.password)
         tree = ET.parse(file)
         file.close()
+        root = tree.getroot()
 
+        if(root.tag == "Error"):
+            print("Couldn't retrieve character information!")
+            print("Error: " + root.text)
+            return(False)
+        else:
+            self.name = root.find("Char/Account/Name").text
+            # Empty the characters list so we won't get any old results
+            self.characters.clear()
+            for character in root.findall("Char"):
+                self.addCharacterByElement(character)
+
+
+    def addCharacterByElement(self, element):
+        char = RotmgCharacter()
+        char.classID = int(element.find("ObjectType").text)
+        char.hp = int(element.find("MaxHitPoints").text)
+        char.mp = int(element.find("MaxMagicPoints").text)
+        char.atk = int(element.find("Attack").text)
+        char.defen = int(element.find("Defense").text)
+        char.spd = int(element.find("Speed").text)
+        char.dex = int(element.find("Dexterity").text)
+        char.vit = int(element.find("HpRegen").text)
+        char.wis = int(element.find("MpRegen").text)
+        char.fame = int(element.find("CurrentFame").text)
+
+        self.characters.append(char)
 
 class ClassStats():
     def __init__(self):
@@ -51,8 +79,10 @@ class ClassStats():
         print("Max Vitality: " + str(self.maxVit))
         print("Max Wisdom: " + str(self.maxWis))
 
+
 class ClassList():
-    classNames = ["Archer", "Wizard", "Priest", "Warrior", "Knight", "Paladin", "Assassin", "Necromancer", "Huntress", "Mystic", "Trickster", "Sorcerer", "Ninja"]
+    classNames = ["Archer", "Wizard", "Priest", "Warrior", "Knight", "Paladin", "Assassin", "Necromancer", "Huntress",
+                  "Mystic", "Trickster", "Sorcerer", "Ninja"]
     classDict = {}
 
     def __init__(self, objectsURL):
@@ -66,7 +96,7 @@ class ClassList():
             root = tree.getroot()
 
             for obj in root:
-                if(obj.attrib["id"] in self.classNames):
+                if (obj.attrib["id"] in self.classNames):
                     self.addToList(obj)
         except Exception:
             self.success = False
@@ -86,6 +116,7 @@ class ClassList():
         self.classDict[classID].maxVit = int(element.find("HpRegen").attrib["max"])
         self.classDict[classID].maxWis = int(element.find("MpRegen").attrib["max"])
 
+
 class RotmgCharacter:
     def __init__(self):
         self.classID = -1
@@ -98,3 +129,14 @@ class RotmgCharacter:
         self.vit = -1
         self.wis = -1
         self.fame = -1
+
+    def printStats(self):
+        print("HP: " + str(self.hp))
+        print("MP: " + str(self.mp))
+        print("ATK: " + str(self.atk))
+        print("DEF: " + str(self.defen))
+        print("SPD: " + str(self.spd))
+        print("DEX: " + str(self.dex))
+        print("VIT: " + str(self.vit))
+        print("WIS: " + str(self.wis))
+        print("FAME: " + str(self.fame))
