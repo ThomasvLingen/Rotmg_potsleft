@@ -24,10 +24,13 @@ class RotmgPlayerInfo:
         return self.classList.success
 
     def updateCharacters(self):
-        file = urlopen("http://www.realmofthemadgod.com/char/list?guid=" + self.email + "&password=" + self.password)
-        tree = ET.parse(file)
-        file.close()
-        root = tree.getroot()
+        try:
+            file = urlopen("http://www.realmofthemadgod.com/char/list?guid=" + self.email + "&password=" + self.password)
+            tree = ET.parse(file)
+            file.close()
+            root = tree.getroot()
+        except ET.ParseError:
+            return False
 
         if(root.tag == "Error"):
             print("Couldn't retrieve character information!")
@@ -39,6 +42,7 @@ class RotmgPlayerInfo:
             self.characters.clear()
             for character in root.findall("Char"):
                 self.addCharacterByElement(character)
+            return(True)
 
 
     def addCharacterByElement(self, element):
